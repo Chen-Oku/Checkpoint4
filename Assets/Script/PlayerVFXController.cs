@@ -2,23 +2,44 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(PlayerMaterialController), typeof(SpeedVFXController))]
 public class PlayerVFXController : MonoBehaviour
 {
     [Header("Materials")]
-    public Material defaultMaterial;
-    public Material speedMaterial;
-    public Material strengthMaterial;
-    public Material shieldMaterial;
+    // Legacy serialized fields: kept so existing scenes/prefabs don't lose references.
+    // Values are migrated to PlayerMaterialController in Awake and these fields are hidden from the Inspector.
+    [SerializeField, HideInInspector]
+    private Material legacyDefaultMaterial;
+    [SerializeField, HideInInspector]
+    private Material legacySpeedMaterial;
+    [SerializeField, HideInInspector]
+    private Material legacyStrengthMaterial;
+    [SerializeField, HideInInspector]
+    private Material legacyShieldMaterial;
 
-    [Header("Particle VFX Prefabs")]
-    public GameObject speedVFXPrefab;    // should contain >=4 particle systems
-    public GameObject strengthVFXPrefab; // should contain >=4 particle systems
-    public GameObject shieldVFXPrefab;   // should contain >=4 particle systems
+    // Particle VFX prefabs removed — optional override GameObjects can still be
+    // passed to ActivatePowerUp via the overrideVFX parameter.
+
+    [Header("Dedicated Speed Systems")]
+    [Tooltip("Looping particle system used while speed power-up is active (e.g. trails).")]
+    [SerializeField, HideInInspector]
+    private ParticleSystem legacySpeedParticleSystem;
+    [Tooltip("One-shot explosion particle system played when speed power-up is acquired.")]
+    [SerializeField, HideInInspector]
+    private ParticleSystem legacySpeedExplosionParticleSystem;
+
+    // Optional helper components created/used during Awake
+    private PlayerMaterialController materialController;
+    private SpeedVFXController speedVFXController;
+
+    [Header("Timing")]
+    [Tooltip("Delay before deactivating speed particle GameObjects to allow trails/particles to fade.")]
+    [SerializeField, HideInInspector]
+    private float legacyDeactivateDelay = 2f;
+    [Tooltip("Temporary trail time used to quickly hide trails when clearing.")]
+    [SerializeField, HideInInspector]
+    private float legacyTrailHideTime = 0.01f;
     
-    [Header("Optional VFX Materials (applied only to spawned VFX particle renderers)")]
-    public Material speedVFXMaterial;    // if set, overrides materials in spawned speed VFX
-    public Material strengthVFXMaterial; // if set, overrides materials in spawned strength VFX
-    public Material shieldVFXMaterial;   // if set, overrides materials in spawned shield VFX
 
     // active instance references
     private GameObject activeVFXInstance;
@@ -27,33 +48,47 @@ public class PlayerVFXController : MonoBehaviour
 
     void Awake()
     {
-        // Cache renderers but exclude particle system renderers so VFX are not affected
+        // Ensure authoritative components exist (RequireComponent makes them present in the Editor, but be defensive)
+        materialController = GetComponent<PlayerMaterialController>();
+        speedVFXController = GetComponent<SpeedVFXController>();
+
+        if (materialController == null)
+            materialController = gameObject.AddComponent<PlayerMaterialController>();
+        if (speedVFXController == null)
+            speedVFXController = gameObject.AddComponent<SpeedVFXController>();
+
+        // Migration: if legacy serialized values exist on this instance, copy them into the authoritative components.
+        // This preserves references from scenes/prefabs when we remove public fields later.
+        if (legacyDefaultMaterial != null)
+            materialController.defaultMaterial = legacyDefaultMaterial;
+        if (legacySpeedMaterial != null)
+            materialController.speedMaterial = legacySpeedMaterial;
+        if (legacyStrengthMaterial != null)
+            materialController.strengthMaterial = legacyStrengthMaterial;
+        if (legacyShieldMaterial != null)
+            materialController.shieldMaterial = legacyShieldMaterial;
+
+        if (legacySpeedParticleSystem != null)
+            speedVFXController.speedParticleSystem = legacySpeedParticleSystem;
+        if (legacySpeedExplosionParticleSystem != null)
+            speedVFXController.speedExplosionParticleSystem = legacySpeedExplosionParticleSystem;
+        // migrate timing values if they differ from defaults
+        if (legacyDeactivateDelay > 0f)
+            speedVFXController.deactivateDelay = legacyDeactivateDelay;
+        if (legacyTrailHideTime > 0f)
+            speedVFXController.trailHideTime = legacyTrailHideTime;
+
+        // Cache renderers for fallback ApplyMaterial path and for SpawnVFX behavior
         var allRenderers = GetComponentsInChildren<Renderer>();
         var filtered = new List<Renderer>(allRenderers.Length);
         foreach (var r in allRenderers)
         {
-            // ParticleSystemRenderer is a Renderer subclass; we do not want to change particle materials here
             if (r is ParticleSystemRenderer)
                 continue;
             filtered.Add(r);
         }
         renderers = filtered.ToArray();
         mpb = new MaterialPropertyBlock();
-        // cache default material if not set
-        if (defaultMaterial == null && renderers.Length > 0)
-        {
-            // Prefer mesh/skinned renderers for the player's default material
-            Material found = null;
-            foreach (var r in renderers)
-            {
-                if (r is MeshRenderer || r is SkinnedMeshRenderer)
-                {
-                    found = r.sharedMaterial;
-                    break;
-                }
-            }
-            defaultMaterial = found ?? renderers[0].sharedMaterial;
-        }
     }
 
     public void ActivatePowerUp(PowerUpType type, float duration = 5f, GameObject overrideVFX = null)
@@ -65,18 +100,22 @@ public class PlayerVFXController : MonoBehaviour
         switch (type)
         {
             case PowerUpType.Speed:
-                ApplyMaterial(speedMaterial);
-                SpawnVFX(overrideVFX ?? speedVFXPrefab);
+                // Apply material via controller (use authoritative component values)
+                if (materialController != null) materialController.ApplyMaterial(materialController.speedMaterial, (speedVFXController != null) ? speedVFXController.speedParticleSystem : legacySpeedParticleSystem);
+                if (speedVFXController != null) speedVFXController.Activate();
+                if (overrideVFX != null) SpawnVFX(overrideVFX);
                 StartCoroutine(TimeoutRestore(duration));
+                // Do not destroy immediately; let TimeoutRestore handle cleanup so the particle
+                // system plays for the full duration of the power-up.
                 break;
             case PowerUpType.Strength:
-                ApplyMaterial(strengthMaterial);
-                SpawnVFX(overrideVFX ?? strengthVFXPrefab);
+                if (materialController != null) materialController.ApplyMaterial(materialController.strengthMaterial);
+                if (overrideVFX != null) SpawnVFX(overrideVFX);
                 StartCoroutine(TimeoutRestore(duration));
                 break;
             case PowerUpType.Shield:
-                ApplyMaterial(shieldMaterial);
-                SpawnVFX(overrideVFX ?? shieldVFXPrefab);
+                if (materialController != null) materialController.ApplyMaterial(materialController.shieldMaterial);
+                if (overrideVFX != null) SpawnVFX(overrideVFX);
                 StartCoroutine(TimeoutRestore(duration));
                 break;
             default:
@@ -86,12 +125,23 @@ public class PlayerVFXController : MonoBehaviour
 
     private void ApplyMaterial(Material mat)
     {
+        // This method is kept for backward compatibility; prefer using PlayerMaterialController.
         if (mat == null) return;
         foreach (var r in renderers)
         {
-            // set shared material so outline/dissolve works; for per-instance properties use mpb
+            // Use speedParticleSystem from the authoritative controller if available, else fall back to legacy field
+            var sp = (speedVFXController != null) ? speedVFXController.speedParticleSystem : legacySpeedParticleSystem;
+            if (sp != null && IsChildOf(r.transform, sp.gameObject.transform))
+                continue;
             r.material = mat;
         }
+    }
+
+    // Helper to test if a transform is the same as or child of a parent transform
+    private bool IsChildOf(Transform t, Transform parent)
+    {
+        if (t == null || parent == null) return false;
+        return t == parent || t.IsChildOf(parent);
     }
 
     private void SpawnVFX(GameObject prefab)
@@ -104,22 +154,13 @@ public class PlayerVFXController : MonoBehaviour
         {
             ps.Play();
         }
-        // Optionally override particle renderers' material for this spawned VFX (if a VFX material was provided)
-        // Determine which VFX material to use based on the prefab reference
-        Material overrideVfxMat = null;
-        if (prefab == speedVFXPrefab) overrideVfxMat = speedVFXMaterial;
-        else if (prefab == strengthVFXPrefab) overrideVfxMat = strengthVFXMaterial;
-        else if (prefab == shieldVFXPrefab) overrideVfxMat = shieldVFXMaterial;
 
-        if (overrideVfxMat != null)
-        {
-            var psRenderers = activeVFXInstance.GetComponentsInChildren<ParticleSystemRenderer>();
-            foreach (var psr in psRenderers)
-            {
-                // set sharedMaterial so the particle renderer uses the desired appearance
-                psr.sharedMaterial = overrideVfxMat;
-            }
-        }
+        // Also trigger the dedicated speed systems (use authoritative controller)
+        if (speedVFXController != null)
+            speedVFXController.Activate();
+        else if (legacySpeedParticleSystem != null)
+            legacySpeedParticleSystem.Play();
+        // No optional VFX material overrides; particle systems use their prefab materials
     }
 
     private IEnumerator TimeoutRestore(float seconds)
@@ -128,8 +169,10 @@ public class PlayerVFXController : MonoBehaviour
             yield return new WaitForSeconds(seconds);
 
         // restore default
-        if (defaultMaterial != null)
-            ApplyMaterial(defaultMaterial);
+        if (materialController != null)
+            materialController.RestoreDefault();
+        else if (legacyDefaultMaterial != null)
+            ApplyMaterial(legacyDefaultMaterial);
 
         if (activeVFXInstance != null)
         {
@@ -141,5 +184,30 @@ public class PlayerVFXController : MonoBehaviour
             Destroy(activeVFXInstance, 2f);
             activeVFXInstance = null;
         }
+            if (speedVFXController != null) speedVFXController.Deactivate();
+            else
+            {
+                // Fallback: stop legacy systems if present
+                if (legacySpeedParticleSystem != null)
+                {
+                    legacySpeedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    legacySpeedParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(legacySpeedParticleSystem.gameObject, legacyDeactivateDelay));
+                }
+                if (legacySpeedExplosionParticleSystem != null)
+                {
+                    legacySpeedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    legacySpeedExplosionParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(legacySpeedExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+                }
+            }
+    }
+    // Helper: deactivate a GameObject after a delay (used to let trails finish)
+    private IEnumerator DeactivateAfterDelay(GameObject go, float delay)
+    {
+        if (delay > 0)
+            yield return new WaitForSeconds(delay);
+        if (go != null)
+            go.SetActive(false);
     }
 }

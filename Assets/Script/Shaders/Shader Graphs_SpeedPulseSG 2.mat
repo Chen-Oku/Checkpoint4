@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Shader Graphs_SpeedPulseSG
+  m_Name: Shader Graphs_SpeedPulseSG 2
   m_Shader: {fileID: -6465566751694194690, guid: 166e99d93e1bacb44a25bb93c663cb12, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -25,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _MainTex:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: 9f2652761c1c28c4caec97c5b6d60068, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _NoiseTex:
@@ -46,17 +46,17 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _EmissionStrength: 4
+    - _EmissionStrength: 0.15
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _ScrollSpeed: 1
-    - _TimeScale: 1
+    - _ScrollSpeed: 0.35
+    - _TimeScale: 7
     m_Colors:
-    - _Color: {r: 0.19607843, g: 0.5882353, b: 1, a: 1}
-    - _NoiseColor: {r: 0.19607843, g: 0.5882353, b: 1, a: 1}
+    - _Color: {r: 0, g: 1.8486173, b: 3.2754714, a: 1}
+    - _NoiseColor: {r: 0.007843137, g: 0.69356424, b: 1, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
---- !u!114 &6439105301893231194
+--- !u!114 &6919932673015929698
 MonoBehaviour:
   m_ObjectHideFlags: 11
   m_CorrespondingSourceObject: {fileID: 0}
