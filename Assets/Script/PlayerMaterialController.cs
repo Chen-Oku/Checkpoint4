@@ -8,7 +8,7 @@ public class PlayerMaterialController : MonoBehaviour
     [Header("Materials")]
     public Material defaultMaterial;
     public Material speedMaterial;
-    public Material strengthMaterial;
+    public Material cosmicMaterial;
     public Material shieldMaterial;
 
     private Renderer[] renderers;
