@@ -139,6 +139,9 @@ public class PlayerVFXController : MonoBehaviour
         // clean previous VFX
         if (activeVFXInstance != null) Destroy(activeVFXInstance);
 
+        // Ensure only one power-up is active at a time: deactivate any other controllers / legacy systems
+        DeactivateAllControllers();
+
         switch (type)
         {
             case PowerUpType.Speed:
@@ -200,6 +203,52 @@ public class PlayerVFXController : MonoBehaviour
             default:
                 break;
         }
+    }
+
+    // Deactivate all known controllers and legacy particle systems so only the newly activated
+    // power-up will have active particles / trails. This is called before activating a new power-up.
+    private void DeactivateAllControllers()
+    {
+        // Deactivate dedicated controllers when present
+        if (speedVFXController != null)
+            speedVFXController.Deactivate();
+        else
+        {
+            if (legacySpeedParticleSystem != null)
+            {
+                legacySpeedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                legacySpeedParticleSystem.Clear(true);
+                StartCoroutine(DeactivateAfterDelay(legacySpeedParticleSystem.gameObject, legacyDeactivateDelay));
+            }
+            if (legacySpeedExplosionParticleSystem != null)
+            {
+                legacySpeedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                legacySpeedExplosionParticleSystem.Clear(true);
+                StartCoroutine(DeactivateAfterDelay(legacySpeedExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+            }
+        }
+
+        if (cosmicVFXController != null)
+            cosmicVFXController.Deactivate();
+        else
+        {
+            if (legacyCosmicParticleSystem != null)
+            {
+                legacyCosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                legacyCosmicParticleSystem.Clear(true);
+                StartCoroutine(DeactivateAfterDelay(legacyCosmicParticleSystem.gameObject, legacyDeactivateDelay));
+            }
+            if (legacyCosmicExplosionParticleSystem != null)
+            {
+                legacyCosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                legacyCosmicExplosionParticleSystem.Clear(true);
+                StartCoroutine(DeactivateAfterDelay(legacyCosmicExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+            }
+        }
+
+        if (shieldVFXController != null)
+            shieldVFXController.Deactivate();
+        // No legacy shield systems exposed on this controller to handle
     }
 
     private void ApplyMaterial(Material mat)
