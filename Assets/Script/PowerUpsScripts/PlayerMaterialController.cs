@@ -42,7 +42,6 @@ public class PlayerMaterialController : MonoBehaviour
         }
     }
 
-    // Apply a material to all cached renderers (skips particle renderers)
     public void ApplyMaterial(Material mat, ParticleSystem skipSystem = null)
     {
         if (mat == null) return;

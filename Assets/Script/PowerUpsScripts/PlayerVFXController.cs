@@ -6,66 +6,62 @@ using UnityEngine;
 public class PlayerVFXController : MonoBehaviour
 {
     [Header("Materials")]
-    // Legacy serialized fields: kept so existing scenes/prefabs don't lose references.
-    // Values are migrated to PlayerMaterialController in Awake and these fields are hidden from the Inspector.
-    [SerializeField, HideInInspector]
-    private Material legacyDefaultMaterial;
-    [SerializeField, HideInInspector]
-    private Material legacySpeedMaterial;
-    [SerializeField, HideInInspector]
-    private Material legacyCosmicMaterial;
-    [SerializeField, HideInInspector]
-    private Material legacyShieldMaterial;
+    [SerializeField]
+    private Material defaultMaterial;
+    [SerializeField]
+    private Material speedMaterial;
+    [SerializeField]
+    private Material cosmicMaterial;
+    [SerializeField]
+    private Material shieldMaterial;
 
-    // Particle VFX prefabs removed — optional override GameObjects can still be
-    // passed to ActivatePowerUp via the overrideVFX parameter.
 
     [Header("Dedicated Speed Systems")]
-    [Tooltip("Looping particle system used while speed power-up is active (e.g. trails).")]
-    [SerializeField, HideInInspector]
-    private ParticleSystem legacySpeedParticleSystem;
-    [Tooltip("One-shot explosion particle system played when speed power-up is acquired.")]
-    [SerializeField, HideInInspector]
-    private ParticleSystem legacySpeedExplosionParticleSystem;
-    [SerializeField, HideInInspector]
-    private ParticleSystem legacyCosmicParticleSystem;
-    [SerializeField, HideInInspector]
-    private ParticleSystem legacyCosmicExplosionParticleSystem;
+    [Tooltip("Sistema de partículas en bucle usado mientras el power-up de Velocidad está activo (p.ej. estelas).")]
+    [SerializeField]
+    private ParticleSystem speedParticleSystem;
+    [Tooltip("Sistema de partículas de explosión de una sola vez reproducido cuando se obtiene el power-up de Velocidad.")]
+    [SerializeField]
+    private ParticleSystem speedExplosionParticleSystem;
+    [SerializeField]
+    private ParticleSystem cosmicParticleSystem;
+    [Tooltip("Sistema de partículas de explosión de una sola vez reproducido cuando se obtiene el power-up Cósmico.")]
+    [SerializeField]
+    private ParticleSystem cosmicExplosionParticleSystem;
 
-    // Optional helper components created/used during Awake
+    // Optional helper creado/usado durante Awake
     private PlayerMaterialController materialController;
     private SpeedVFXController speedVFXController;
     private CosmicVFXController cosmicVFXController;
     private ShieldVFXController shieldVFXController;
 
     [Header("Default VFX Prefabs")]
-    [Tooltip("Optional default VFX prefab spawned on the player when a Speed power-up is picked up (used if the pickup doesn't provide an override).")]
+    [Tooltip("Prefab VFX predeterminado opcional que se instancia en el jugador cuando se recoge un power-up de Velocidad (usado si el pickup no provee override).")]
     [SerializeField]
     private GameObject defaultSpeedVFXPrefab;
-    [Tooltip("Optional default VFX prefab spawned on the player when a Cosmic power-up is picked up (used if the pickup doesn't provide an override).")]
+    [Tooltip("Prefab VFX predeterminado opcional que se instancia en el jugador cuando se recoge un power-up Cósmico (usado si el pickup no provee override).")]
     [SerializeField]
     private GameObject defaultCosmicVFXPrefab;
-    [Tooltip("Optional default VFX prefab spawned on the player when a Shield power-up is picked up (used if the pickup doesn't provide an override).")]
+    [Tooltip("Prefab VFX predeterminado opcional que se instancia en el jugador cuando se recoge un power-up de Escudo (usado si el pickup no provee override).")]
     [SerializeField]
     private GameObject defaultShieldVFXPrefab;
 
     [Header("Timing")]
-    [Tooltip("Delay before deactivating speed particle GameObjects to allow trails/particles to fade.")]
-    [SerializeField, HideInInspector]
-    private float legacyDeactivateDelay = 2f;
-    [Tooltip("Temporary trail time used to quickly hide trails when clearing.")]
-    [SerializeField, HideInInspector]
-    private float legacyTrailHideTime = 0.01f;
+    [Tooltip("Retraso antes de desactivar GameObjects de partículas de Velocidad para permitir que las estelas/partículas se desvanezcan.")]
+    [SerializeField]
+    private float deactivateDelay = 2f;
+    [Tooltip("Tiempo temporal de las estelas usado para ocultarlas rápidamente al limpiar.")]
+    [SerializeField]
+    private float trailHideTime = 0.01f;
     
 
-    // active instance references
     private GameObject activeVFXInstance;
     private Renderer[] renderers;
     private MaterialPropertyBlock mpb;
 
     void Awake()
     {
-        // Ensure authoritative components exist (RequireComponent makes them present in the Editor, but be defensive)
+    // Asegurar que los componentes autorizados existan y obtener referencias
         materialController = GetComponent<PlayerMaterialController>();
         speedVFXController = GetComponent<SpeedVFXController>();
 
@@ -74,41 +70,38 @@ public class PlayerVFXController : MonoBehaviour
         if (speedVFXController == null)
             speedVFXController = gameObject.AddComponent<SpeedVFXController>();
 
-        // Migration: if legacy serialized values exist on this instance, copy them into the authoritative components.
-        // This preserves references from scenes/prefabs when we remove public fields later.
-        if (legacyDefaultMaterial != null)
-            materialController.defaultMaterial = legacyDefaultMaterial;
-        if (legacySpeedMaterial != null)
-            materialController.speedMaterial = legacySpeedMaterial;
-        if (legacyCosmicMaterial != null)
-            materialController.cosmicMaterial = legacyCosmicMaterial;
-        if (legacyShieldMaterial != null)
-            materialController.shieldMaterial = legacyShieldMaterial;
+    // Migración: si existen valores serializados en esta instancia, copiarlos a los componentes autorizados.
+    // Esto preserva referencias desde escenas/prefabs.
+        if (defaultMaterial != null)
+            materialController.defaultMaterial = defaultMaterial;
+        if (speedMaterial != null)
+            materialController.speedMaterial = speedMaterial;
+        if (cosmicMaterial != null)
+            materialController.cosmicMaterial = cosmicMaterial;
+        if (shieldMaterial != null)
+            materialController.shieldMaterial = shieldMaterial;
 
-        if (legacySpeedParticleSystem != null)
-            speedVFXController.speedParticleSystem = legacySpeedParticleSystem;
-        if (legacySpeedExplosionParticleSystem != null)
-            speedVFXController.speedExplosionParticleSystem = legacySpeedExplosionParticleSystem;
-        // migrate timing values if they differ from defaults
-        if (legacyDeactivateDelay > 0f)
-            speedVFXController.deactivateDelay = legacyDeactivateDelay;
-        if (legacyTrailHideTime > 0f)
-            speedVFXController.trailHideTime = legacyTrailHideTime;
+        if (speedParticleSystem != null)
+            speedVFXController.speedParticleSystem = speedParticleSystem;
+        if (speedExplosionParticleSystem != null)
+            speedVFXController.speedExplosionParticleSystem = speedExplosionParticleSystem;
+        // migrar valores de timing si se han personalizado
+        if (deactivateDelay > 0f)
+            speedVFXController.deactivateDelay = deactivateDelay;
+        if (trailHideTime > 0f)
+            speedVFXController.trailHideTime = trailHideTime;
 
-        // Ensure and migrate legacy cosmic systems into the authoritative cosmic controller
+    // asegurar que el controlador Cosmic exista y migrar valores
         cosmicVFXController = GetComponent<CosmicVFXController>();
         if (cosmicVFXController == null)
             cosmicVFXController = gameObject.AddComponent<CosmicVFXController>();
-        if (legacyCosmicParticleSystem != null)
-            cosmicVFXController.cosmicParticleSystem = legacyCosmicParticleSystem;
-        if (legacyCosmicExplosionParticleSystem != null)
-            cosmicVFXController.cosmicExplosionParticleSystem = legacyCosmicExplosionParticleSystem;
-        if (legacyDeactivateDelay > 0f)
-            cosmicVFXController.deactivateDelay = legacyDeactivateDelay;
-        // if (legacyTrailHideTime > 0f)
-        //     cosmicVFXController.trailHideTime = legacyTrailHideTime;
+        if (cosmicParticleSystem != null)
+            cosmicVFXController.cosmicParticleSystem = cosmicParticleSystem;
+        if (cosmicExplosionParticleSystem != null)
+            cosmicVFXController.cosmicExplosionParticleSystem = cosmicExplosionParticleSystem;
+        if (deactivateDelay > 0f)
+            cosmicVFXController.deactivateDelay = deactivateDelay;
 
-        // Cache renderers for fallback ApplyMaterial path and for SpawnVFX behavior
         var allRenderers = GetComponentsInChildren<Renderer>();
         var filtered = new List<Renderer>(allRenderers.Length);
         foreach (var r in allRenderers)
@@ -120,13 +113,13 @@ public class PlayerVFXController : MonoBehaviour
         renderers = filtered.ToArray();
         mpb = new MaterialPropertyBlock();
 
-        // Ensure Shield controller exists (added defensively to match other controllers)
+    // Asegurar que el controlador de Shield exista 
         shieldVFXController = GetComponent<ShieldVFXController>();
         if (shieldVFXController == null)
             shieldVFXController = gameObject.AddComponent<ShieldVFXController>();
 
-        // Diagnostic: warn if no cosmic VFX sources are present so it's easier to debug
-        bool hasCosmicSources = (defaultCosmicVFXPrefab != null) || (legacyCosmicParticleSystem != null) || (legacyCosmicExplosionParticleSystem != null) || (cosmicVFXController != null && (cosmicVFXController.cosmicParticleSystem != null || cosmicVFXController.cosmicExplosionParticleSystem != null || cosmicVFXController.cosmicEffectPrefab != null));
+    // Diagnóstico: avisar si no hay fuentes de VFX Cósmico asignadas para facilitar depuración
+    bool hasCosmicSources = (defaultCosmicVFXPrefab != null) || (cosmicParticleSystem != null) || (cosmicExplosionParticleSystem != null) || (cosmicVFXController != null && (cosmicVFXController.cosmicParticleSystem != null || cosmicVFXController.cosmicExplosionParticleSystem != null || cosmicVFXController.cosmicEffectPrefab != null));
         if (!hasCosmicSources)
         {
             Debug.LogWarning("PlayerVFXController: No cosmic VFX prefab or particle systems assigned for Cosmic power-up. Assign either PowerUp.vfxPrefab on pickups or defaultCosmicVFXPrefab / CosmicVFXController particle systems on the player.", this);
@@ -136,24 +129,24 @@ public class PlayerVFXController : MonoBehaviour
     public void ActivatePowerUp(PowerUpType type, float duration = 5f, GameObject overrideVFX = null)
     {
         StopAllCoroutines();
-        // clean previous VFX
+    // limpiar VFX previo
         if (activeVFXInstance != null) Destroy(activeVFXInstance);
 
-        // Ensure only one power-up is active at a time: deactivate any other controllers / legacy systems
-        DeactivateAllControllers();
+    // asegurar que solo el power-up activado tenga VFX activos
+        DeactivateAllControllers(type);
 
         switch (type)
         {
             case PowerUpType.Speed:
-                // Apply material via controller (use authoritative component values)
-                if (materialController != null) materialController.ApplyMaterial(materialController.speedMaterial, (speedVFXController != null) ? speedVFXController.speedParticleSystem : legacySpeedParticleSystem);
+                    // Aplicar material via controller 
+                if (materialController != null) materialController.ApplyMaterial(materialController.speedMaterial, (speedVFXController != null) ? speedVFXController.speedParticleSystem : speedParticleSystem);
                 if (speedVFXController != null) speedVFXController.Activate();
-                // spawn override if provided, otherwise use default prefab for Speed
+                // instanciar override si se proporciona, de lo contrario usar el prefab predeterminado para Velocidad
                 var speedPrefabToSpawn = overrideVFX != null ? overrideVFX : defaultSpeedVFXPrefab;
                 if (speedPrefabToSpawn != null) SpawnVFX(speedPrefabToSpawn);
                 StartCoroutine(TimeoutRestore(duration, PowerUpType.Speed));
-                // Do not destroy immediately; let TimeoutRestore handle cleanup so the particle
-                // system plays for the full duration of the power-up.
+                // No destruir inmediatamente; TimeoutRestore manejará la limpieza para que el sistema
+                // de partículas se reproduzca durante toda la duración del power-up.
                 break;
             case PowerUpType.Cosmic:
                 if (materialController != null) materialController.ApplyMaterial(materialController.cosmicMaterial);
@@ -167,7 +160,7 @@ public class PlayerVFXController : MonoBehaviour
                     Debug.LogWarning("PlayerVFXController: CosmicVFXController missing on player. Dedicated cosmic particle systems won't play.", this);
                 }
 
-                // spawn override if provided, otherwise use default prefab for Cosmic
+                // instanciar override si se proporciona, de lo contrario usar el prefab predeterminado para Cósmico
                 var cosmicPrefabToSpawn = overrideVFX != null ? overrideVFX : defaultCosmicVFXPrefab;
                 if (cosmicPrefabToSpawn != null)
                 {
@@ -195,7 +188,7 @@ public class PlayerVFXController : MonoBehaviour
                 {
                     Debug.LogWarning("PlayerVFXController: ShieldVFXController missing on player. Shield particle systems won't play.", this);
                 }
-                // spawn override if provided, otherwise use default prefab for Shield
+                // instanciar override si se proporciona, de lo contrario usar el prefab predeterminado para Escudo
                 var shieldPrefabToSpawn = overrideVFX != null ? overrideVFX : defaultShieldVFXPrefab;
                 if (shieldPrefabToSpawn != null) SpawnVFX(shieldPrefabToSpawn);
                 StartCoroutine(TimeoutRestore(duration, PowerUpType.Shield));
@@ -205,67 +198,72 @@ public class PlayerVFXController : MonoBehaviour
         }
     }
 
-    // Deactivate all known controllers and legacy particle systems so only the newly activated
-    // power-up will have active particles / trails. This is called before activating a new power-up.
-    private void DeactivateAllControllers()
+    private void DeactivateAllControllers(PowerUpType? exclude = null)
     {
-        // Deactivate dedicated controllers when present
-        if (speedVFXController != null)
-            speedVFXController.Deactivate();
-        else
+    // Velocidad
+        if (exclude != PowerUpType.Speed)
         {
-            if (legacySpeedParticleSystem != null)
+            if (speedVFXController != null)
+                speedVFXController.Deactivate();
+            else
             {
-                legacySpeedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                legacySpeedParticleSystem.Clear(true);
-                StartCoroutine(DeactivateAfterDelay(legacySpeedParticleSystem.gameObject, legacyDeactivateDelay));
-            }
-            if (legacySpeedExplosionParticleSystem != null)
-            {
-                legacySpeedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                legacySpeedExplosionParticleSystem.Clear(true);
-                StartCoroutine(DeactivateAfterDelay(legacySpeedExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+                if (speedParticleSystem != null)
+                {
+                    speedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    speedParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(speedParticleSystem.gameObject, deactivateDelay));
+                }
+                if (speedExplosionParticleSystem != null)
+                {
+                    speedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    speedExplosionParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(speedExplosionParticleSystem.gameObject, deactivateDelay));
+                }
             }
         }
 
-        if (cosmicVFXController != null)
-            cosmicVFXController.Deactivate();
-        else
+    // Cósmico
+        if (exclude != PowerUpType.Cosmic)
         {
-            if (legacyCosmicParticleSystem != null)
+            if (cosmicVFXController != null)
+                cosmicVFXController.Deactivate();
+            else
             {
-                legacyCosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                legacyCosmicParticleSystem.Clear(true);
-                StartCoroutine(DeactivateAfterDelay(legacyCosmicParticleSystem.gameObject, legacyDeactivateDelay));
-            }
-            if (legacyCosmicExplosionParticleSystem != null)
-            {
-                legacyCosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                legacyCosmicExplosionParticleSystem.Clear(true);
-                StartCoroutine(DeactivateAfterDelay(legacyCosmicExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+                if (cosmicParticleSystem != null)
+                {
+                    cosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    cosmicParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(cosmicParticleSystem.gameObject, deactivateDelay));
+                }
+                if (cosmicExplosionParticleSystem != null)
+                {
+                    cosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    cosmicExplosionParticleSystem.Clear(true);
+                    StartCoroutine(DeactivateAfterDelay(cosmicExplosionParticleSystem.gameObject, deactivateDelay));
+                }
             }
         }
 
-        if (shieldVFXController != null)
-            shieldVFXController.Deactivate();
-        // No legacy shield systems exposed on this controller to handle
+    // Escudo
+        if (exclude != PowerUpType.Shield)
+        {
+            if (shieldVFXController != null)
+                shieldVFXController.Deactivate();
+        }
     }
 
     private void ApplyMaterial(Material mat)
     {
-        // This method is kept for backward compatibility; prefer using PlayerMaterialController.
         if (mat == null) return;
         foreach (var r in renderers)
         {
-            // Use speedParticleSystem from the authoritative controller if available, else fall back to legacy field
-            var sp = (speedVFXController != null) ? speedVFXController.speedParticleSystem : legacySpeedParticleSystem;
+            var sp = (speedVFXController != null) ? speedVFXController.speedParticleSystem : speedParticleSystem;
             if (sp != null && IsChildOf(r.transform, sp.gameObject.transform))
                 continue;
             r.material = mat;
         }
     }
 
-    // Helper to test if a transform is the same as or child of a parent transform
     private bool IsChildOf(Transform t, Transform parent)
     {
         if (t == null || parent == null) return false;
@@ -275,22 +273,16 @@ public class PlayerVFXController : MonoBehaviour
     private void SpawnVFX(GameObject prefab)
     {
         if (prefab == null) return;
-        // Instantiate at the player's world position/rotation and parent to keep it aligned.
+        // Instanciar el prefab VFX como hijo del jugador
         activeVFXInstance = Instantiate(prefab, transform.position, transform.rotation, transform);
-        // Ensure local transform is reset so prefab appears at the expected point on the player
         activeVFXInstance.transform.localPosition = Vector3.zero;
         activeVFXInstance.transform.localRotation = Quaternion.identity;
-        // ensure particle systems play
+        // asegurar que los sistemas de partículas se reproduzcan
         var systems = activeVFXInstance.GetComponentsInChildren<ParticleSystem>();
         foreach (var ps in systems)
         {
             ps.Play();
         }
-        // NOTE: Do NOT trigger dedicated controllers here. Activation of the
-        // speed/cosmic controllers should be performed by the caller
-        // (ActivatePowerUp) so that spawning a VFX prefab for one power-up
-        // doesn't unintentionally enable another power-up's systems.
-        // No optional VFX material overrides; particle systems use their prefab materials
     }
 
     private IEnumerator TimeoutRestore(float seconds, PowerUpType type)
@@ -301,10 +293,10 @@ public class PlayerVFXController : MonoBehaviour
         // restore default
         if (materialController != null)
             materialController.RestoreDefault();
-        else if (legacyDefaultMaterial != null)
-            ApplyMaterial(legacyDefaultMaterial);
+        else if (defaultMaterial != null)
+            ApplyMaterial(defaultMaterial);
 
-        // Diagnostic: log material restore
+        // Diagnosticar: log material restore
         Debug.Log("PlayerVFXController: Restored default material after power-up timeout: " + type, this);
 
         if (activeVFXInstance != null)
@@ -317,7 +309,7 @@ public class PlayerVFXController : MonoBehaviour
             Destroy(activeVFXInstance, 2f);
             activeVFXInstance = null;
         }
-        // Deactivate only the controller corresponding to the expired power-up
+        // Desactivar controladores dedicados correspondientes al power-up expirado
         switch (type)
         {
             case PowerUpType.Speed:
@@ -325,17 +317,17 @@ public class PlayerVFXController : MonoBehaviour
                     speedVFXController.Deactivate();
                 else
                 {
-                    if (legacySpeedParticleSystem != null)
+                    if (speedParticleSystem != null)
                     {
-                        legacySpeedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                        legacySpeedParticleSystem.Clear(true);
-                        StartCoroutine(DeactivateAfterDelay(legacySpeedParticleSystem.gameObject, legacyDeactivateDelay));
+                        speedParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                        speedParticleSystem.Clear(true);
+                        StartCoroutine(DeactivateAfterDelay(speedParticleSystem.gameObject, deactivateDelay));
                     }
-                    if (legacySpeedExplosionParticleSystem != null)
+                    if (speedExplosionParticleSystem != null)
                     {
-                        legacySpeedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                        legacySpeedExplosionParticleSystem.Clear(true);
-                        StartCoroutine(DeactivateAfterDelay(legacySpeedExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+                        speedExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                        speedExplosionParticleSystem.Clear(true);
+                        StartCoroutine(DeactivateAfterDelay(speedExplosionParticleSystem.gameObject, deactivateDelay));
                     }
                 }
                 break;
@@ -344,22 +336,22 @@ public class PlayerVFXController : MonoBehaviour
                     cosmicVFXController.Deactivate();
                 else
                 {
-                    if (legacyCosmicParticleSystem != null)
+                    if (cosmicParticleSystem != null)
                     {
-                        legacyCosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                        legacyCosmicParticleSystem.Clear(true);
-                        StartCoroutine(DeactivateAfterDelay(legacyCosmicParticleSystem.gameObject, legacyDeactivateDelay));
+                        cosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                        cosmicParticleSystem.Clear(true);
+                        StartCoroutine(DeactivateAfterDelay(cosmicParticleSystem.gameObject, deactivateDelay));
                     }
-                    if (legacyCosmicExplosionParticleSystem != null)
+                    if (cosmicExplosionParticleSystem != null)
                     {
-                        legacyCosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
-                        legacyCosmicExplosionParticleSystem.Clear(true);
-                        StartCoroutine(DeactivateAfterDelay(legacyCosmicExplosionParticleSystem.gameObject, legacyDeactivateDelay));
+                        cosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                        cosmicExplosionParticleSystem.Clear(true);
+                        StartCoroutine(DeactivateAfterDelay(cosmicExplosionParticleSystem.gameObject, deactivateDelay));
                     }
                 }
                 break;
             case PowerUpType.Shield:
-                // Ensure material is restored before deactivating shield VFX
+                // Asegurar que el material se restaure antes de desactivar el VFX del escudo
                 if (materialController != null)
                 {
                     materialController.RestoreDefault();
@@ -368,11 +360,9 @@ public class PlayerVFXController : MonoBehaviour
                     shieldVFXController.Deactivate();
                 break;
             default:
-                // Shield handled above; other types no-op
                 break;
         }
     }
-    // Helper: deactivate a GameObject after a delay (used to let trails finish)
     private IEnumerator DeactivateAfterDelay(GameObject go, float delay)
     {
         if (delay > 0)

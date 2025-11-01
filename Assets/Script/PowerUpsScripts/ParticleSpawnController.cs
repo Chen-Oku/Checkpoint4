@@ -2,7 +2,6 @@ using UnityEngine;
 
 public class ParticleSpawnController : MonoBehaviour
 {
-    // Simple helper to play a particle prefab at a position with optional parent.
     public static GameObject Spawn(GameObject prefab, Vector3 position, Transform parent = null, float destroyAfter = 5f)
     {
         if (prefab == null) return null;

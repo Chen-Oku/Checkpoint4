@@ -13,22 +13,21 @@ public class CosmicVFXController : MonoBehaviour
     public float deactivateDelay = 2f;
 
     [Header("Power-up")]
-    // Prefab to spawn on the player when power-up is collected (optional)
+    [Tooltip("Prefab VFX opcional que se instancia en el jugador cuando se recoge el power-up (opcional).")]
     public GameObject cosmicEffectPrefab;
-    // Optional material to apply to the player while power-up is active
+    [Tooltip("Material opcional que se aplica al jugador mientras el power-up está activo.")]
     public Material cosmicPlayerMaterial;
-    // Optional renderer reference for the player (can be assigned in inspector)
+    [Tooltip("Referencia opcional al renderer del jugador (puede asignarse en el Inspector).")]
     public Renderer playerRenderer;
-    // If true, keep the main cosmicParticleSystem visible and playing from the start
+    [Tooltip("Si es true, mantener el particle system principal Cósmico visible y reproduciéndose desde el inicio.")]
     public bool showCosmicAtStart = true;
-    // How long to keep the player material before restoring
+    [Tooltip("Tiempo (segundos) que mantener el material del jugador antes de restaurarlo.")]
     public float materialDuration = 5f;
     private Material originalPlayerMaterial;
 
     void Awake()
     {
         InitDedicatedCosmicSystems();
-        // If configured, show the main cosmic particle system from the start
         if (showCosmicAtStart && cosmicParticleSystem != null)
         {
             cosmicParticleSystem.gameObject.SetActive(true);
@@ -36,36 +35,26 @@ public class CosmicVFXController : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Call this when the player obtains the power-up.
-    /// - plays the explosion particle system
-    /// - instantiates the cosmicEffectPrefab on the player (if provided)
-    /// - applies cosmicPlayerMaterial to the player's renderer (if provided) for materialDuration seconds
-    /// </summary>
-    /// <param name="player">Optional player GameObject to parent the spawned VFX under.</param>
-    /// <param name="targetRenderer">Optional renderer to apply the material to. If null, uses playerRenderer field.</param>
     public void TriggerPowerUp(GameObject player = null, Renderer targetRenderer = null)
     {
-        // Play explosion particle system
         if (cosmicExplosionParticleSystem != null)
         {
             cosmicExplosionParticleSystem.gameObject.SetActive(true);
             cosmicExplosionParticleSystem.Play();
-            // schedule deactivation
+            // programar desactivación
             StartCoroutine(DeactivateAfterDelay(cosmicExplosionParticleSystem.gameObject, deactivateDelay));
         }
 
-        // Spawn the VFX prefab on the player (optional)
         if (cosmicEffectPrefab != null && player != null)
         {
             Instantiate(cosmicEffectPrefab, player.transform.position, player.transform.rotation, player.transform);
         }
 
-        // Apply material to the player renderer temporarily (optional)
+        // Aplicar material temporalmente al renderer del jugador
         var rend = targetRenderer != null ? targetRenderer : playerRenderer;
         if (rend != null && cosmicPlayerMaterial != null)
         {
-            // store original and set new
+            // almacenar original y asignar nuevo
             originalPlayerMaterial = rend.sharedMaterial;
             rend.material = cosmicPlayerMaterial;
             StartCoroutine(RestoreMaterialAfterDelay(rend, originalPlayerMaterial, materialDuration));
@@ -78,7 +67,7 @@ public class CosmicVFXController : MonoBehaviour
             yield return new WaitForSeconds(delay);
         if (rend != null)
         {
-            // restore the original shared material to avoid leaking instances
+            // restarurar material original
             rend.material = original;
         }
     }
@@ -87,26 +76,47 @@ public class CosmicVFXController : MonoBehaviour
     {
         if (cosmicParticleSystem != null)
         {
-            cosmicParticleSystem.gameObject.SetActive(false);
+            if (IsOwnedByThis(cosmicParticleSystem))
+                cosmicParticleSystem.gameObject.SetActive(false);
+            else
+            {
+                cosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                cosmicParticleSystem.Clear(true);
+            }
         }
 
         if (cosmicExplosionParticleSystem != null)
         {
-            cosmicExplosionParticleSystem.gameObject.SetActive(false);
+            if (IsOwnedByThis(cosmicExplosionParticleSystem))
+                cosmicExplosionParticleSystem.gameObject.SetActive(false);
+            else
+            {
+                cosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                cosmicExplosionParticleSystem.Clear(true);
+            }
         }
+    }
+
+    private bool IsOwnedByThis(ParticleSystem ps)
+    {
+        if (ps == null) return false;
+        var go = ps.gameObject;
+        return go == this.gameObject || go.transform.IsChildOf(this.transform);
     }
 
     public void Activate()
     {
         if (cosmicParticleSystem != null)
         {
-            cosmicParticleSystem.gameObject.SetActive(true);
+            if (IsOwnedByThis(cosmicParticleSystem))
+                cosmicParticleSystem.gameObject.SetActive(true);
             cosmicParticleSystem.Play();
         }
 
         if (cosmicExplosionParticleSystem != null)
         {
-            cosmicExplosionParticleSystem.gameObject.SetActive(true);
+            if (IsOwnedByThis(cosmicExplosionParticleSystem))
+                cosmicExplosionParticleSystem.gameObject.SetActive(true);
             cosmicExplosionParticleSystem.Play();
         }
     }
@@ -117,14 +127,16 @@ public class CosmicVFXController : MonoBehaviour
         {
             cosmicParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             cosmicParticleSystem.Clear(true);
-            StartCoroutine(DeactivateAfterDelay(cosmicParticleSystem.gameObject, deactivateDelay));
+            if (IsOwnedByThis(cosmicParticleSystem))
+                StartCoroutine(DeactivateAfterDelay(cosmicParticleSystem.gameObject, deactivateDelay));
         }
 
         if (cosmicExplosionParticleSystem != null)
         {
             cosmicExplosionParticleSystem.Stop(true, ParticleSystemStopBehavior.StopEmitting);
             cosmicExplosionParticleSystem.Clear(true);
-            StartCoroutine(DeactivateAfterDelay(cosmicExplosionParticleSystem.gameObject, deactivateDelay));
+            if (IsOwnedByThis(cosmicExplosionParticleSystem))
+                StartCoroutine(DeactivateAfterDelay(cosmicExplosionParticleSystem.gameObject, deactivateDelay));
         }
     }
 
@@ -136,5 +148,3 @@ public class CosmicVFXController : MonoBehaviour
             go.SetActive(false);
     }
 }
-
-// CosmicVFXController: handles cosmic particle systems and trails

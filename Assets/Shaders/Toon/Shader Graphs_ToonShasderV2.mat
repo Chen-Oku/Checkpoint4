@@ -60,16 +60,17 @@ Material:
     m_Ints: []
     m_Floats:
     - _Brightness: 1
+    - _FresnelPower: 5.01
     - _QueueControl: 0
     - _QueueOffset: 0
     - _RimExponent: 4.17
     - _RimMix: 0
-    - _RimSmooth: 0.14
-    - _RimThreshold: 0.965
+    - _RimSmooth: 0.309
+    - _RimThreshold: 0.869
     - _SpecularStrength: 0
     - _StepSmooth: 0.309
     - _Steps: 8.97
-    - _Strength: 1
+    - _Strength: 0.711
     m_Colors:
     - _Color: {r: 1, g: 1, b: 1, a: 1}
     - _RimColor: {r: 1, g: 1, b: 1, a: 0}

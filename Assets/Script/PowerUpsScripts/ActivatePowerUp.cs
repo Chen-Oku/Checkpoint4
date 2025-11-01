@@ -1,7 +1,6 @@
 using UnityEngine;
 
-// This script should be attached to the player GameObject. It detects PowerUp pickups and
-// forwards the activation to a PlayerVFXController (on the same GameObject).
+// Este script se pone en el jugador para manejar la activación de power-ups al entrar en contacto con ellos.
 public class ActivatePowerUp : MonoBehaviour
 {
     private PlayerVFXController vfxController;
@@ -15,7 +14,6 @@ public class ActivatePowerUp : MonoBehaviour
         }
     }
 
-    // When the player touches a PowerUp object, activate the corresponding VFX and destroy the pickup.
     void OnTriggerEnter(Collider other)
     {
         var power = other.GetComponent<PowerUp>();
@@ -30,7 +28,7 @@ public class ActivatePowerUp : MonoBehaviour
                 Debug.Log("Picked up power-up: " + power.type + " but no VFX controller available.");
             }
 
-            // Optionally destroy the power-up object so it can't be reused
+            // opcional: destruir el power-up después de recogerlo
             Destroy(other.gameObject);
         }
     }

@@ -6,11 +6,15 @@ using UnityEngine;
 public class SpeedVFXController : MonoBehaviour
 {
     [Header("Dedicated Speed Systems")]
+    [Tooltip("Sistema de partículas en bucle usado mientras el power-up de Velocidad está activo (p.ej. estela).")]
     public ParticleSystem speedParticleSystem;
+    [Tooltip("Sistema de partículas de explosión de una sola vez reproducido cuando se obtiene el power-up de Velocidad.")]
     public ParticleSystem speedExplosionParticleSystem;
 
     [Header("Timing")]
+    [Tooltip("Retraso antes de desactivar GameObjects de partículas de Velocidad para permitir que las estelas/partículas se desvanezcan.")]
     public float deactivateDelay = 2f;
+    [Tooltip("Tiempo temporal de las estelas usado para ocultarlas rápidamente al limpiar.")]
     public float trailHideTime = 0.01f;
 
     private readonly List<TrailRenderer> speedTrails = new List<TrailRenderer>();

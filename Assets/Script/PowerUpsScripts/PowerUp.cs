@@ -5,8 +5,8 @@ public enum PowerUpType { Speed, Cosmic, Shield }
 public class PowerUp : MonoBehaviour
 {
     public PowerUpType type = PowerUpType.Speed;
-    [Tooltip("Duration in seconds for temporary power-ups. 0 = instant / one-shot.")]
+    [Tooltip("Duración en segundos para power-ups temporales. 0 = instantáneo / de un solo uso.")]
     public float duration = 5f;
-    [Tooltip("Optional VFX prefab to override the default for this power-up.")]
+    [Tooltip("Prefab de VFX opcional para sobrescribir el predeterminado de este power-up.")]
     public GameObject vfxPrefab;
 }

@@ -6,13 +6,15 @@ using UnityEngine;
 public class ShieldVFXController : MonoBehaviour
 {
     [Header("Dedicated Shield Systems")]
-    [Tooltip("Looping particle system used while shield power-up is active (e.g. aura).")]
+    [Tooltip("Sistema de partículas en bucle usado mientras el power-up de Escudo está activo (p.ej. aura).")]
     public ParticleSystem shieldParticleSystem;
-    [Tooltip("One-shot explosion particle system played when shield power-up is acquired.")]
+    [Tooltip("Sistema de partículas de explosión de una sola vez reproducido cuando se obtiene el power-up de Escudo.")]
     public ParticleSystem shieldExplosionParticleSystem;
 
     [Header("Timing")]
+    [Tooltip("Retraso antes de desactivar GameObjects de partículas de Escudo para permitir que las estelas/partículas se desvanezcan.")]
     public float deactivateDelay = 2f;
+    [Tooltip("Tiempo temporal de las estelas usado para ocultarlas rápidamente al limpiar.")]
     public float trailHideTime = 0.01f;
 
     private readonly List<TrailRenderer> shieldTrails = new List<TrailRenderer>();
